@@ -14,7 +14,7 @@ Comandi disponibili:
   /settimana_scorsa -> spese della settimana scorsa (lun-dom), per persona
   /mese             -> spese del mese corrente, per persona
   /mese_scorso      -> spese del mese scorso, per persona
-  /aiuto            -> istruzioni rapide
+  /aiuto            -> istruzioni rapide,
 """
 
 import re
