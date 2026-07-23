@@ -96,6 +96,29 @@ def leggi_spese(chat_id: int, data_inizio: datetime, data_fine: datetime):
     return righe
 
 
+def leggi_ultime_spese(chat_id: int, n: int = 5):
+    conn = sqlite3.connect(DB_PATH)
+    cur = conn.execute(
+        "SELECT id, nome, importo, descrizione, timestamp FROM spese "
+        "WHERE chat_id = ? ORDER BY id DESC LIMIT ?",
+        (chat_id, n),
+    )
+    righe = cur.fetchall()
+    conn.close()
+    return righe
+
+
+def elimina_spesa(chat_id: int, spesa_id: int) -> bool:
+    conn = sqlite3.connect(DB_PATH)
+    cur = conn.execute(
+        "DELETE FROM spese WHERE id = ? AND chat_id = ?", (spesa_id, chat_id)
+    )
+    conn.commit()
+    eliminata = cur.rowcount > 0
+    conn.close()
+    return eliminata
+
+
 # ---------------------------------------------------------------------------
 # ESTRAZIONE IMPORTO DALLA DIDASCALIA
 # ---------------------------------------------------------------------------
@@ -217,6 +240,43 @@ async def cmd_mese_scorso(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(formatta_report(righe, titolo))
 
 
+async def cmd_ultime(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    righe = leggi_ultime_spese(update.effective_chat.id, n=10)
+    if not righe:
+        await update.message.reply_text("Nessuna spesa registrata.")
+        return
+
+    testo = ["Ultime spese registrate:", ""]
+    for spesa_id, nome, importo, descrizione, timestamp in righe:
+        data = datetime.fromisoformat(timestamp).strftime("%d/%m %H:%M")
+        testo.append(f"#{spesa_id} - {nome}: {importo:.2f} € ({data})")
+    testo.append("")
+    testo.append("Per cancellarne una: /elimina numero  (es: /elimina 12)")
+    await update.message.reply_text("\n".join(testo))
+
+
+async def cmd_elimina(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not context.args:
+        await update.message.reply_text(
+            "Specifica il numero della spesa da eliminare.\n"
+            "Usa /ultime per vedere i numeri, poi /elimina numero"
+        )
+        return
+
+    try:
+        spesa_id = int(context.args[0])
+    except ValueError:
+        await update.message.reply_text("Il numero deve essere un intero, es: /elimina 12")
+        return
+
+    if elimina_spesa(update.effective_chat.id, spesa_id):
+        await update.message.reply_text(f"Spesa #{spesa_id} eliminata.")
+    else:
+        await update.message.reply_text(
+            f"Non ho trovato nessuna spesa #{spesa_id} in questo gruppo."
+        )
+
+
 async def cmd_aiuto(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "Come usarmi:\n\n"
@@ -226,7 +286,9 @@ async def cmd_aiuto(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "/settimana - spese della settimana corrente per persona\n"
         "/settimana_scorsa - spese della settimana scorsa\n"
         "/mese - spese del mese corrente per persona\n"
-        "/mese_scorso - spese del mese scorso"
+        "/mese_scorso - spese del mese scorso\n"
+        "/ultime - ultime 10 spese registrate (con numero)\n"
+        "/elimina numero - cancella una spesa sbagliata"
     )
 
 
@@ -244,6 +306,8 @@ def main():
     app.add_handler(CommandHandler("settimana_scorsa", cmd_settimana_scorsa))
     app.add_handler(CommandHandler("mese", cmd_mese))
     app.add_handler(CommandHandler("mese_scorso", cmd_mese_scorso))
+    app.add_handler(CommandHandler("ultime", cmd_ultime))
+    app.add_handler(CommandHandler("elimina", cmd_elimina))
     app.add_handler(MessageHandler(filters.PHOTO, gestisci_foto))
 
     logger.info("Bot avviato. In ascolto...")
