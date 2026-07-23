@@ -20,8 +20,13 @@ Comandi disponibili:
 import re
 import sqlite3
 import logging
+from io import BytesIO
 from datetime import datetime, timedelta
 from pathlib import Path
+
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
 
 from telegram import Update
 from telegram.ext import (
@@ -278,6 +283,58 @@ async def cmd_elimina(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
 
+def genera_grafico(righe, titolo: str) -> BytesIO:
+    totali_per_persona = {}
+    for nome, importo, _descrizione, _timestamp in righe:
+        totali_per_persona[nome] = totali_per_persona.get(nome, 0.0) + importo
+
+    persone = list(totali_per_persona.keys())
+    valori = list(totali_per_persona.values())
+
+    # ordina dal più alto al più basso
+    ordine = sorted(range(len(valori)), key=lambda i: -valori[i])
+    persone = [persone[i] for i in ordine]
+    valori = [valori[i] for i in ordine]
+
+    fig, ax = plt.subplots(figsize=(7, 4.5))
+    barre = ax.bar(persone, valori, color="#4C8BF5")
+    ax.set_title(titolo)
+    ax.set_ylabel("Euro (€)")
+    ax.bar_label(barre, fmt="%.2f €", padding=3)
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    fig.tight_layout()
+
+    buffer = BytesIO()
+    fig.savefig(buffer, format="png", dpi=150)
+    plt.close(fig)
+    buffer.seek(0)
+    return buffer
+
+
+async def cmd_grafico(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    periodo = context.args[0].lower() if context.args else "mese"
+    ora = datetime.now()
+
+    if periodo in ("settimana", "settimane"):
+        inizio = inizio_settimana(ora)
+        fine = ora + timedelta(seconds=1)
+        titolo = f"Spese settimana corrente ({inizio.strftime('%d/%m')} - {ora.strftime('%d/%m')})"
+    else:
+        inizio = inizio_mese(ora)
+        fine = ora + timedelta(seconds=1)
+        titolo = f"Spese mese corrente ({inizio.strftime('%B %Y')})"
+
+    righe = leggi_spese(update.effective_chat.id, inizio, fine)
+
+    if not righe:
+        await update.message.reply_text("Nessuna spesa registrata per questo periodo.")
+        return
+
+    grafico = genera_grafico(righe, titolo)
+    await update.message.reply_photo(photo=grafico, caption=titolo)
+
+
 async def cmd_aiuto(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "Come usarmi:\n\n"
@@ -289,7 +346,9 @@ async def cmd_aiuto(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "/mese - spese del mese corrente per persona\n"
         "/mese_scorso - spese del mese scorso\n"
         "/ultime - ultime 10 spese registrate (con numero)\n"
-        "/elimina numero - cancella una spesa sbagliata"
+        "/elimina numero - cancella una spesa sbagliata\n"
+        "/grafico - grafico spese del mese corrente per persona\n"
+        "/grafico settimana - grafico spese della settimana corrente"
     )
 
 
@@ -309,6 +368,7 @@ def main():
     app.add_handler(CommandHandler("mese_scorso", cmd_mese_scorso))
     app.add_handler(CommandHandler("ultime", cmd_ultime))
     app.add_handler(CommandHandler("elimina", cmd_elimina))
+    app.add_handler(CommandHandler("grafico", cmd_grafico))
     app.add_handler(MessageHandler(filters.PHOTO, gestisci_foto))
 
     logger.info("Bot avviato. In ascolto...")
