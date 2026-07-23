@@ -41,7 +41,8 @@ from telegram.ext import (
 import os
 BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "INSERISCI_QUI_IL_TUO_TOKEN")
 
-DB_PATH = Path(__file__).parent / "spese.db"
+DB_PATH = Path(os.environ.get("DB_DIR", str(Path(__file__).parent))) / "spese.db"
+DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
