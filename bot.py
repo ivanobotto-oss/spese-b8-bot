@@ -39,7 +39,7 @@ from telegram.ext import (
 # Inserisci qui il token ottenuto da BotFather, oppure impostalo come
 # variabile d'ambiente TELEGRAM_BOT_TOKEN (consigliato, più sicuro).
 import os
-BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "8721092350:AAESUi2QbmdZcXX_eXj5lTL8El3LrgwLRtg")
+BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "INSERISCI_QUI_IL_TUO_TOKEN")
 
 DB_PATH = Path(__file__).parent / "spese.db"
 
