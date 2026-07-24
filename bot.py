@@ -348,7 +348,7 @@ async def cmd_aiuto(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "/ultime - ultime 10 spese registrate (con numero)\n"
         "/elimina numero - cancella una spesa sbagliata\n"
         "/grafico - grafico spese del mese corrente per persona\n"
-        "/grafico settimana - grafico spese della settimana corrente"
+        "/grafico_settimana - grafico spese della settimana corrente"
     )
 
 
