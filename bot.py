@@ -334,6 +334,23 @@ async def cmd_grafico(update: Update, context: ContextTypes.DEFAULT_TYPE):
     grafico = genera_grafico(righe, titolo)
     await update.message.reply_photo(photo=grafico, caption=titolo)
 
+async def cmd_grafico_settimana(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    periodo = context.args[0].lower() if context.args else "mese"
+    ora = datetime.now()
+
+        inizio = inizio_settimana(ora)
+        fine = ora + timedelta(seconds=1)
+        titolo = f"Spese settimana corrente ({inizio.strftime('%d/%m')} - {ora.strftime('%d/%m')})"
+   
+
+    righe = leggi_spese(update.effective_chat.id, inizio, fine)
+
+    if not righe:
+        await update.message.reply_text("Nessuna spesa registrata per questo periodo.")
+        return
+
+    grafico = genera_grafico(righe, titolo)
+    await update.message.reply_photo(photo=grafico, caption=titolo)
 
 async def cmd_aiuto(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
@@ -348,7 +365,7 @@ async def cmd_aiuto(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "/ultime - ultime 10 spese registrate (con numero)\n"
         "/elimina numero - cancella una spesa sbagliata\n"
         "/grafico - grafico spese del mese corrente per persona\n"
-        "/grafico settimana - grafico spese della settimana corrente"
+        "/grafico_settimana - grafico spese della settimana corrente"
     )
 
 
@@ -369,6 +386,7 @@ def main():
     app.add_handler(CommandHandler("ultime", cmd_ultime))
     app.add_handler(CommandHandler("elimina", cmd_elimina))
     app.add_handler(CommandHandler("grafico", cmd_grafico))
+    app.add_handler(CommandHandler("grafico_settimana", cmd_grafico_setimana))
     app.add_handler(MessageHandler(filters.PHOTO, gestisci_foto))
 
     logger.info("Bot avviato. In ascolto...")
