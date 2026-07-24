@@ -339,7 +339,7 @@ async def cmd_grafico_settimana(update: Update, context: ContextTypes.DEFAULT_TY
     ora = datetime.now()
 
         inizio = inizio_settimana(ora)
-        fine = ora + timedelta(seconds=1)
+        fine = ora + timedelta(seconds=1) 
         titolo = f"Spese settimana corrente ({inizio.strftime('%d/%m')} - {ora.strftime('%d/%m')})"
    
 
